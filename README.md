@@ -1,5 +1,4 @@
 # RI - Recuperación de información
-# URL - http://www.labredes.unlu.edu.ar/sites/www.labredes.unlu.edu.ar/files/site/data/ri/RI-2017-TP-Analisis.pdf
 
 @author - Zamudio Fabian (2017)
 @Proyecto - Estructuras de Datos para RI
