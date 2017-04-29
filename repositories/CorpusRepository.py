@@ -29,5 +29,5 @@ class CorpusRepository:
     def getDocument(self,documentName):
         filePath = join(self.path,documentName)
         with codecs.open(filePath, mode='rt', encoding='utf-8',errors='ignore') as fp:
-            return Documento(documentName,fp.read())
+            return Documento(len(self.documentos)+1,documentName,fp.read())
         return None

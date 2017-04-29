@@ -3,13 +3,8 @@
 
 class Documento:
 
-    filename = ''
-    content = ''
-    tamanio = 0
-    tokens = []
-    terminos = {}
-
-    def __init__(self,filename,content):
+    def __init__(self,id,filename,content):
+        self.id = id
         self.filename = filename
         self.content = content
         self.tamanio = len(content)

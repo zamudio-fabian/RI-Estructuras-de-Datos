@@ -12,9 +12,10 @@ class TranslateRegla(Regla):
         return content
 
     def translate(self,to_translate):
-        tabin = u'áéíóúñ'
+        tabin = [u'áéíóúñ', u'àèìòùñ', u'äëïöüñ', u'âêîôûñ']
         tabout = u'aeioun'
-        tabin = [ord(char) for char in tabin]
-        translate_table = dict(zip(tabin, tabout))
-        return to_translate.translate(translate_table).encode('utf-8')
+        translate_table = {}
+        for i in xrange(0, len(tabin)):
+            translate_table.update(dict(zip([ord(char) for char in tabin[i]], tabout)))
+        return to_translate.translate(translate_table)
         

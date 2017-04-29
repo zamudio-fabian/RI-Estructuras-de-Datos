@@ -25,12 +25,11 @@ class TokenRepository:
     reglasTokens = []
     reglasEntities = []
     documentos = []
-    fileNameTerminos = "results/terminos.txt"
     lista_vacias = []
     stemmer = None
+    pathVacias = ''
 
     def __init__(self):
-
         self.reglasEntities.append(EmailRegla())
         self.reglasEntities.append(UrlRegla())
         self.reglasEntities.append(FechasRegla())
@@ -45,15 +44,20 @@ class TokenRepository:
         self.reglasTokens.append(MinMaxCaracteresRegla())
         self.stemmer = SpanishStemmer()
 
-    def tokenizar(self,documentos, **options):
+    #########################################################
+    # Metodo principal para inicializar variables y mandar a 
+    # tokenizar dependendiendo el tipo de parametro
+    # @param string  | array:Documents
+    # @return dic
+    #########################################################
+    def tokenizar(self,objectToTokenizar, **options):
         # INIT
-        self.documentos = documentos
         self.tokens = []
         self.terminos = {}
         self.lista_vacias = []
-        pathVacias = options.get('pathVacias', None)
+        self.pathVacias = options.get('pathVacias', None)
 
-        if pathVacias != None :
+        if self.pathVacias != None :
             print u"ANALIZANDO PALABRAS VACIAS"
             with codecs.open(pathVacias, mode='rt', encoding='utf-8') as vacias:
                 content = vacias.read()
@@ -65,46 +69,71 @@ class TokenRepository:
                     if palabra not in self.lista_vacias:
                         self.lista_vacias.append(palabra)
 
+        # Caso particular si es una query y no un array de docs
+        if (isinstance(objectToTokenizar,basestring)):
+            return self.tokenizarString(objectToTokenizar)
+        
+        self.tokenizarDocumentos(objectToTokenizar)
+        response = {}
+        response['terminos'] = self.terminos
+        response['docs'] = self.documentos
+        return response
+
+
+    #########################################################
+    # Aplica reglas de tokenizador a un string para obtener sus terminos
+    # @param string
+    # @return dic
+    #########################################################
+    def tokenizarString(self,content):
+        documentoTerminos = {}
+        # Aplicamos cada regla definida en self.reglasEntities para entidades
+        for instancia in self.reglasEntities:
+            response = instancia.run(content)
+            content = response['content']
+            documentoTerminos.update(response['terminos'])
+
+        # Aplicamos cada regla definida en self.reglasDocumento para normalizar
+        for instancia in self.reglasDocumento:
+            content = instancia.run(content)
+
+        # Sacamos tokens de documentos
+        tokensDocumento = self.getTokens(content)
+
+        # Aplicamos cada regla definida en self.reglasTokens
+        for instancia in self.reglasTokens:
+            tokensDocumento = instancia.run(tokensDocumento)
+
+        # Sacamos palabras vacias
+        if self.pathVacias != None :
+            for token in tokensDocumento:
+                if token in self.lista_vacias:
+                    tokensDocumento.remove(token)
+
+        # Aplicamos Stemming excepto entidades
+        tokensDocumento = self.stemmizar(tokensDocumento)
+        
+        terminosAux = self.getTerminos(tokensDocumento)
+        documentoTerminos.update(terminosAux)
+
+        return documentoTerminos
+
+    #########################################################
+    # Recorre un array de documentos y aplicar las reglas de
+    # tokenización y obtener los terminos de cada uno
+    # @param array:Documentos
+    # @return dic
+    #########################################################
+    def tokenizarDocumentos(self,documentos):
         # Procesamos cada documento
         indexDocumento = 0
         cantidadDocumentos = len(documentos)
         for documento in documentos:
+            self.documentos.append(documento.id)
             documento.terminos = {}
-            documento.tokens = []
             content = documento.content
-            tokensEntities = []
-            # Aplicamos cada regla definida en self.reglasEntities para entidades
-            for instancia in self.reglasEntities:
-                response = instancia.run(content)
-                content = response['content']
-                # Agregamos los terminos a los del documento
-                documento.terminos.update(response['terminos'])
-                tokensEntities += response['tokens']
 
-
-            # Aplicamos cada regla definida en self.reglasDocumento para normalizar
-            for instancia in self.reglasDocumento:
-                content = instancia.run(content)
-            # Sacamos tokens de documentos
-            tokensAux = self.getTokens(content)
-            self.tokens = self.tokens + tokensAux + tokensEntities
-            documento.tokens = tokensAux + tokensEntities
-
-            # Aplicamos cada regla definida en self.reglasTokens
-            for instancia in self.reglasTokens:
-                tokensAux = instancia.run(tokensAux)
-
-            # Sacamos palabras vacias
-            if pathVacias != None :
-                for token in tokensAux:
-                    if token in self.lista_vacias:
-                        tokensAux.remove(token)
-
-            # Aplicamos Stemming excepto entidades
-            tokensAux = self.stemmizar(tokensAux)
-
-            terminosAux = self.getTerminos(tokensAux)
-            documento.terminos.update(terminosAux)
+            documento.terminos = self.tokenizarString(content)
 
             self.saveTerminosGlobal(documento)
             indexDocumento += 1
@@ -114,19 +143,22 @@ class TokenRepository:
             sys.stdout.flush()
 
         print '\n'
-        self.saveTerminosFile()
-        # Armamos la respuesta
-        response = {}
-        response['terminos'] = self.terminos
-        response['tokens'] = self.tokens
-        response['documentos'] = documentos
-        return response
 
+    #########################################################
+    # Hace un strip para obtener los tokens
+    # @param string
+    # @return array
+    #########################################################
     def getTokens(self,string):
         content = string.strip().split()
         # Return
         return content
 
+    #########################################################
+    # Elimina las repeticiones de tokens
+    # @param array
+    # @return dic
+    #########################################################
     def getTerminos(self,tokens):
         terminos = {}
         for token in tokens:
@@ -137,54 +169,31 @@ class TokenRepository:
                 terminos[token]['CF'] += 1
         return terminos
 
+    #########################################################
+    # Aplica Stemmer español a un array de tokens
+    # @param array
+    # @return string
+    #########################################################
     def stemmizar(self,tokens):
         tokensAux = []
         for token in tokens:
             tokensAux.append(self.stemmer.stem(token))
         return tokensAux
 
+    #########################################################
+    # Si existe un termino en un doc que no este en los terminos
+    # globales lo agrega
+    # @param Documento
+    #########################################################
     def saveTerminosGlobal(self,documento):
         terminos = {}
         for termino in documento.terminos:
             if termino not in self.terminos:
                 self.terminos[termino] = {}
                 self.terminos[termino]['CF'] = documento.terminos[termino]['CF']
-                self.terminos[termino]['DOCS'] = [documento]
+                self.terminos[termino]['DOCS'] = [documento.id]
             else:
                 self.terminos[termino]['CF'] += 1
                 if documento not in self.terminos[termino]["DOCS"]:
-                    self.terminos[termino]["DOCS"].append(documento)
-
-    def saveTerminos(tokens,documento):
-        if token not in self.terminos:
-            self.terminos[token] = {}
-            self.terminos[token]['CF'] = 1
-            self.terminos[token]['DOCS'] = [documento]
-        else:
-            self.terminos[token]['CF'] += 1
-            if documento not in self.terminos[token]["DOCS"]:
-                self.terminos[token]["DOCS"].append(documento)
-
-    def saveTerminosFile(self):
-        with codecs.open(self.fileNameTerminos, mode="w", encoding="utf-8") as archivo:
-            index = 0
-            archivo.write('ID'.ljust(6))
-            archivo.write('|')
-            archivo.write('TERMINO'.ljust(30))
-            archivo.write('|')
-            archivo.write('CF'.ljust(6))
-            archivo.write('|')
-            archivo.write('DF'.ljust(6))
-            archivo.write('\n')
-            archivo.write('-'*50)
-            archivo.write('\n')
-            for termino in sorted(self.terminos.keys()):
-                archivo.write(str(index).ljust(6))
-                archivo.write('|')
-                archivo.write(termino.ljust(30))
-                archivo.write('|')
-                archivo.write(str(self.terminos[termino]['CF']).ljust(6))
-                archivo.write('|')
-                archivo.write(str(len(self.terminos[termino]['DOCS'])).ljust(6))
-                archivo.write('\n')
-                index += 1
+                    self.terminos[termino]["DOCS"].append(documento.id)
+    

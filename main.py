@@ -3,10 +3,11 @@
 import sys
 from os.path import *
 from controllers.TokenizadorController import *
+from controllers.BooleanQueryController import *
 
 def tokenizar(path,pathVacias):
     tokenizadorController = TokenizadorController(path,pathVacias = pathVacias)
-    tokenizadorController.run()
+    return tokenizadorController.run()
 
 if __name__ == "__main__":
     if (len(sys.argv) <= 1):
@@ -23,4 +24,15 @@ if __name__ == "__main__":
     if (isdir(path) == 0):
         sys.exit("Error. No existe el directorio")
 
-    tokenizar(path,pathVacias)
+    response = tokenizar(path,pathVacias)
+    booleanQueryController = BooleanQueryController()
+    booleanQueryController.setParams(response)
+
+    
+    query = raw_input('Ingrese su búsqueda booleana (exit para salir): ').decode('UTF-8')
+    while query != u'exit':
+        print booleanQueryController.getResults(query)
+        query = raw_input('Ingrese su búsqueda booleana: ').decode('UTF-8')
+
+
+

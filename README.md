@@ -7,9 +7,22 @@ Repositorio de Recuperación de Información
 
 
 
-1.  Escriba un programa que procese documentos de un directorio y arme los índices que
+1.  **Escriba un programa que procese documentos de un directorio y arme los índices que
 permitan soportar búsquedas booleanas. Luego, codifique un segundo programa que
-permita buscar por uno o dos términos utilizando los operadores AND, OR y NOT.
+permita buscar por uno o dos términos utilizando los operadores AND, OR y NOT.** 
+
+> Se permite la búsqueda por uno o más términos. Algunos ejemplos son:
+> * not salud
+> * profesional or salud
+> * profesional and salud
+> * profesional and not salud
+> * profesional or salud or inscripción
+> * profesional or salud and inscripción
+> 
+> La resolución de la query es sencilla por lo que se resuelven las operaciones por orden de izquierda a derecha.
+> 
+> Ejecutar el programa como:
+> `python main.py <path_corpus_directory> <path_stopwords_file>`
 
 2.  Utilizando el programa anterior ejecute corridas con diferentes colecciones. Calcule los
 tamaños mínimos, máximos y promedio de las listas de posteo. ¿Qué utilidad tiene esta
