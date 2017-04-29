@@ -32,7 +32,7 @@ class BooleanQueryRepository:
         # Se obtienen los docs para cada termino
         for parte in partes:
             if (parte not in ['and','or','not']):
-                terminoFromParte = self.tokenRepository.tokenizarString(parte).keys()[0]
+                terminoFromParte = self.tokenRepository.tokenizar(parte).keys()[0]
                 parciales.append(self.getPostingByTermino(terminoFromParte))
             else:
                 parciales.append(parte)

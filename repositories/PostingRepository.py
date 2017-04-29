@@ -42,11 +42,11 @@ class PostingRepository:
         with open(self.fileNamePosting, "wb") as file:
             for terminoKey in sorted(terminos.keys()):
                 cantidadDocs = len(terminos[terminoKey]['DOCS'])
-                estructura = Struct('i'*cantidadDocs)
+                estructura = Struct('I'*cantidadDocs)
                 file.write(estructura.pack(*terminos[terminoKey]['DOCS']))
                 details = [cantidadDocs,lastPosition]
                 lexicon[terminoKey] = details
-                lastPosition = lastPosition + estructura.size # 4 bytes ocupa un unsigned int
+                lastPosition = lastPosition + estructura.size # 4 bytes ocupa un unsigned int           
             file.close()
         return lexicon
 

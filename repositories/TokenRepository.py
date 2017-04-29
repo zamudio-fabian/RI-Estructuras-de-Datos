@@ -28,6 +28,7 @@ class TokenRepository:
     lista_vacias = []
     stemmer = None
     pathVacias = ''
+    estadisticas = {'docs':{}}
 
     def __init__(self):
         self.reglasEntities.append(EmailRegla())
@@ -77,6 +78,7 @@ class TokenRepository:
         response = {}
         response['terminos'] = self.terminos
         response['docs'] = self.documentos
+        response['estadisticas'] = self.estadisticas
         return response
 
 
@@ -135,6 +137,36 @@ class TokenRepository:
 
             documento.terminos = self.tokenizarString(content)
 
+            # Recopilación de estadísticas
+            if (not self.estadisticas.get('min',None)):
+                self.estadisticas['min'] = len(documento.terminos)*4 # 4bytes ocupa el posting de cada termino-doc
+            else:
+                if(self.estadisticas['min'] > len(documento.terminos)*4):
+                    self.estadisticas['min'] = len(documento.terminos)*4
+
+            if (not self.estadisticas.get('max',None)):
+                self.estadisticas['max'] = len(documento.terminos)*4 # 4bytes ocupa el posting de cada termino-doc
+            else:
+                if(self.estadisticas['max'] < len(documento.terminos)*4):
+                    self.estadisticas['max'] = len(documento.terminos)*4
+
+            if (not self.estadisticas.get('totalSize',None)):
+                self.estadisticas['totalSize'] = len(documento.terminos)*4 # 4bytes ocupa el posting de cada termino-doc
+            else:
+                self.estadisticas['totalSize'] += len(documento.terminos)*4
+
+            overheadDoc = len(documento.terminos)*4
+            for termino in documento.terminos:
+                if (not self.terminos.get(termino,None)):
+                    overheadDoc += len(termino) + 4 # 1byte ocupa cada char + 4byte ocupa el DF
+            
+            self.estadisticas['docs'][documento.id] = float(overheadDoc)/float(overheadDoc+len(documento.content))
+
+            if (not self.estadisticas.get('overhead',None)):
+                self.estadisticas['overhead'] = overheadDoc
+            else:
+                self.estadisticas['overhead'] += overheadDoc
+
             self.saveTerminosGlobal(documento)
             indexDocumento += 1
             porcentaje = (indexDocumento * 100) / cantidadDocumentos
@@ -143,6 +175,12 @@ class TokenRepository:
             sys.stdout.flush()
 
         print '\n'
+        if (not self.estadisticas.get('countDocs',None)):
+            self.estadisticas['countDocs'] = indexDocumento
+        else:
+            self.estadisticas['countDocs'] += indexDocumento
+
+        
 
     #########################################################
     # Hace un strip para obtener los tokens
