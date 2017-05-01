@@ -23,12 +23,12 @@ class TokenizadorController():
 
     def run(self):
         documentos = self.corpusRepository.getListDocuments()
-        print "PROCESANDO DOCUMENTOS"
+        # print "PROCESANDO DOCUMENTOS"
         response = self.tokenRepository.tokenizar(documentos,pathVacias = self.pathVacias)
         # Se guarda primero el archivo en ASCII para control y luego el archivo binario
         self.PostingRepository.save(response['terminos'])
         lexicon = self.PostingRepository.saveBinario(response['terminos'])
-        result = {'lexicon':lexicon,'documentos':response['docs']}
+        result = {'lexicon':lexicon,'documentos':response['docs'],'estadisticas':response['estadisticas']}
         self.saveEstadisticas(response['estadisticas'])
         return result
 

@@ -169,16 +169,8 @@ class TokenRepository:
 
             self.saveTerminosGlobal(documento)
             indexDocumento += 1
-            porcentaje = (indexDocumento * 100) / cantidadDocumentos
-
-            sys.stdout.write(u"\r"+str(int(porcentaje)).ljust(3)+u"% \u258F"+(u"\u2588"*int(porcentaje / 2)).ljust(50)+u"\u2595")
-            sys.stdout.flush()
-
-        print '\n'
-        if (not self.estadisticas.get('countDocs',None)):
-            self.estadisticas['countDocs'] = indexDocumento
-        else:
-            self.estadisticas['countDocs'] += indexDocumento
+            print str(indexDocumento)+';'+str(len(self.terminos))
+        self.estadisticas['countDocs'] = indexDocumento
 
         
 

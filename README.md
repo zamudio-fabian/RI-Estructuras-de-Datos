@@ -11,21 +11,12 @@ Repositorio de Recuperación de Información
 permitan soportar búsquedas booleanas. Luego, codifique un segundo programa que
 permita buscar por uno o dos términos utilizando los operadores AND, OR y NOT. 
 
-2.  **Utilizando el programa anterior ejecute corridas con diferentes colecciones. Calcule los
+2.  Utilizando el programa anterior ejecute corridas con diferentes colecciones. Calcule los
 tamaños mínimos, máximos y promedio de las listas de posteo. ¿Qué utilidad tiene esta
 información? Calcule el overhead de los índices respecto de la colección. Calcule el
-overhead para cada documento. ¿Qué conclusiones se pueden extraer?**
+overhead para cada documento. ¿Qué conclusiones se pueden extraer?
 
-
-Las estadísticas generadas son almacenadas en results/estadisticas.txt. Se realizaron 5 corridas con corpues diferentes y almacenaron sus resultados en la carpeta results
-
-Ejecutar el programa como:
-`python main.py <path_corpus_directory> <path_stopwords_file>`
-
-3.  Agregue documentos a una colección (indexación incrementa
-l.  y repita el ejercicio 2. Sus
-resultados: ¿Son consistentes con la ley de Heaps? Este proceso es costoso: ¿Cómo se
-puede realizar eficientemente?
+3.  **Agregue documentos a una colección (indexación incremental) y repita el ejercicio 2. Sus resultados: ¿Son consistentes con la ley de Heaps? Este proceso es costoso: ¿Cómo se puede realizar eficientemente?**
 
 4.  Modifique el programa del ejercicio 1 para armar un archivo invertido posicional a nivel de
 palabra. Luego, implemente consultas con operadores de proximidad.

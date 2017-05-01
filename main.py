@@ -4,10 +4,11 @@ import sys
 from os.path import *
 from controllers.TokenizadorController import *
 from controllers.BooleanQueryController import *
+import time  
+from watchdog.observers import Observer  
+from models.Watcher import *
 
-def tokenizar(path,pathVacias):
-    tokenizadorController = TokenizadorController(path,pathVacias = pathVacias)
-    return tokenizadorController.run()
+
 
 if __name__ == "__main__":
     if (len(sys.argv) <= 1):
@@ -24,15 +25,27 @@ if __name__ == "__main__":
     if (isdir(path) == 0):
         sys.exit("Error. No existe el directorio")
 
-    response = tokenizar(path,pathVacias)
+    
+    tokenizadorController = TokenizadorController(path,pathVacias = pathVacias)
+    response = tokenizadorController.run()
+
     booleanQueryController = BooleanQueryController()
     booleanQueryController.setParams(response)
 
+    myWatcher = Watcher()
+    myWatcher.addTokenizador(tokenizadorController)
     
-    query = raw_input('Ingrese su búsqueda booleana (exit para salir): ').decode('UTF-8')
-    while query != u'exit':
-        print booleanQueryController.getResults(query)
-        query = raw_input('Ingrese su búsqueda booleana: ').decode('UTF-8')
+    observer = Observer()
+    observer.schedule(myWatcher, path)
+    observer.start()
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+
+    observer.join()
 
 
 
