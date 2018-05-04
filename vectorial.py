@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 import codecs
+import math
 from struct import Struct
 from os.path import join
 from indexador import Tokenizador
@@ -40,9 +41,8 @@ class Buscador():
     def cargar_postings(self, lista_terminos):  # Formato de las postings: df_término, secuencia de id_docs
         packer = Struct(self.FORMATO_POSTING_DOC_ID_TF)
         with open('index/postings.bin', mode="rb") as file_postings:
-            docs_por_termino = {}
+            doc_terminos = {}
             for termino in lista_terminos:
-                docs_por_termino[termino] = {}
                 # Si el elemento esta en el lexico lo proceso de otra manera lo ignoro
                 if termino in self.lexicon:
                     # Muevo el puntero
@@ -54,33 +54,12 @@ class Buscador():
                         bytes_posting_doc_id_tf = file_postings.read(packer.size)
                         doc_id_tf = packer.unpack(bytes_posting_doc_id_tf)
                         doc_id = doc_id_tf[0]
-                        tf = doc_id_tf[1]
-                        # Creamos un nuevo struct para leer las posiciones
-                        packerPosiciones = Struct('I'*tf)
-                        bytes_posting_posicion = file_postings.read(packerPosiciones.size)
-                        docs_por_termino[termino][doc_id] = list(packerPosiciones.unpack(bytes_posting_posicion))
-            return docs_por_termino
-
-    @staticmethod
-    def cerca(lista_1, lista_2, interseccion_docs, max_diff_posicion):
-        docs_con_adyacentes = []
-        for doc_id in interseccion_docs:
-            # Mientras tenga elementos en ambos array
-            while (lista_1[doc_id] and lista_2[doc_id]):
-                # Si la diferencia de las posiciones es 1 encontre un ADYACENTE
-                if(max_diff_posicion >= abs(lista_1[doc_id][0] - lista_2[doc_id][0])):
-                    docs_con_adyacentes.append(doc_id)
-                    break
-                else:
-                    # Si la posicion del termino A es menor a la del termino B
-                    if(lista_1[doc_id][0] < lista_2[doc_id][0]):
-                        # Saco la posición del termino A, ya que estoy seguro que la 
-                        # proxima posición de B va a ser más grande la diferencia
-                        lista_1[doc_id].pop(0)
-                    else:
-                        # Sino saco la posición del termino B
-                        lista_2[doc_id].pop(0)
-        return docs_con_adyacentes
+                        if doc_id not in doc_terminos:
+                            doc_terminos[doc_id] = {}
+                        if termino not in doc_terminos[doc_id]:
+                            doc_terminos[doc_id][termino] = 0
+                        doc_terminos[doc_id][termino] += 1 
+            return doc_terminos
 
     def calcular_tfs(self, terminos):
         ret = {}
@@ -88,37 +67,106 @@ class Buscador():
             ret[termino] = ret.get(termino, 0) + 1
         return ret
 
+
+    def recuperar_archivos_opt_a(self, terminos_query, doc_terminos):
+        ret = {}
+        for index, documento in enumerate(doc_terminos):
+            numerador = 0
+            denominador = 0
+            # Por cada termino en la query
+            for termino in terminos_query:
+
+                qtf = float(terminos_query.get(termino, 0)*0.5)
+                qtf /= max(terminos_query.values())
+                qtf += 0.5
+
+                dtf = float(doc_terminos[documento].get(termino, 0))
+                dtf /= max(doc_terminos[documento].values())
+
+                idf = self.lexicon[termino]['idf']
+                dtfidf = dtf*idf
+                qtfidf = qtf*idf
+
+                numerador += qtfidf * dtfidf
+                denominador += qtfidf**2
+
+            denominador = math.sqrt(denominador) * self.documentos[index]['norma']
+            ret[documento] = numerador/denominador if denominador != 0 else 0
+        return ret
+
+    def recuperar_archivos_opt_b(self, terminos, query, terminos_archivos):
+        ret = {}
+        for archivo in terminos_archivos:
+            numerador = 0
+            denominador = 0
+            for termino in query:
+                if(not termino in terminos):
+                    continue
+                if(len(terminos_archivos[archivo]['terminos']) == 0):
+                    continue
+
+                qtf = float(query.get(termino, 0)*0.5)
+                qtf /= max(query.values())
+                qtf += 0.5
+
+                dtf = float(terminos_archivos[archivo]['terminos'].get(termino, 0))
+                dtf /= max(terminos_archivos[archivo]['terminos'].values())
+
+                idf = 1
+                dtfidf = dtf*idf
+                qtfidf = math.log(1 + float(len(terminos_archivos))/terminos[termino]['df'],2) * idf
+
+                numerador += qtfidf * dtfidf
+                denominador += qtfidf**2
+
+            denominador = math.sqrt(denominador) * terminos_archivos[archivo]['norma']
+            ret[archivo] = numerador/denominador if denominador != 0 else 0
+        return ret
+
+    def recuperar_archivos_opt_c(self, terminos, query, terminos_archivos):
+        ret = {}
+        for archivo in terminos_archivos:
+            numerador = 0
+            denominador = 0
+            for termino in query:
+                if(not termino in terminos):
+                    continue
+                if(len(terminos_archivos[archivo]['terminos']) == 0):
+                    continue
+
+                qtf = float(query.get(termino, 0)*0.5)
+                qtf /= max(query.values())
+                qtf += 0.5
+
+                dtf = float(terminos_archivos[archivo]['terminos'].get(termino, 0))
+                dtf /= max(terminos_archivos[archivo]['terminos'].values())
+
+                idf = self.calcular_idf(terminos_archivos, terminos, termino)
+                dtfidf = dtf*idf
+                qtfidf = math.log(1 + query.get(termino, 0),2) * idf
+
+                numerador += qtfidf * dtfidf
+                denominador += qtfidf**2
+
+            denominador = math.sqrt(denominador) * terminos_archivos[archivo]['norma']
+            ret[archivo] = numerador/denominador if denominador != 0 else 0
+        return ret
+
     def cargar_busqueda(self, tokens_query, typeTFIDF):
         terminos_query = self.calcular_tfs(tokens_query)
+        postings = self.cargar_postings(terminos_query)
         if (typeTFIDF == 'C') :
-            ret = recuperar_archivos_opt_c(terminos, terminos_query, terminos_archivos)
+            ret = self.recuperar_archivos_opt_c(terminos_query, postings)
         elif (typeTFIDF == 'B') :
-            ret = recuperar_archivos_opt_b(terminos, terminos_query, terminos_archivos)
+            ret = self.recuperar_archivos_opt_b(terminos_query, postings)
         else :
-            ret = recuperar_archivos_opt_a(terminos, terminos_query, terminos_archivos)
+            ret = self.recuperar_archivos_opt_a(terminos_query, postings)
         ranking = sorted(ret.items(), key=lambda x: x[1], reverse=True)
         
         for r in xrange(0, min(15, len(ranking))):
             if(ranking[r][1] < 0.02):
                 continue
-            print (r+1),'-', terminos_archivos[ranking[r][0]]['docid'], ranking[r]
-
-    def buscar(self, lista_parametros):
-        terminos_query = []
-        for parametro in lista_parametros:
-            if parametro not in [self.CERCA, self.ADYACENTE]:
-                terminos_query.append(parametro)
-        postings = self.cargar_postings(terminos_query)
-        posting_1 = postings[terminos_query[0]]
-        posting_2 = postings[terminos_query[1]]
-        interseccion_docs = []
-        for index in posting_1.keys():
-            if index in posting_2:
-                interseccion_docs.append(index)
-        if lista_parametros[0] == self.CERCA:
-            return self.cerca(posting_1, posting_2, interseccion_docs, self.CERCA_DIFF)
-        elif lista_parametros[0] == self.ADYACENTE:
-            return self.cerca(posting_1, posting_2, interseccion_docs, 1)
+            print (r+1),'-', self.documentos[ranking[r][0]]['name'], ranking[r][1]
 
 
 if __name__ == "__main__":
