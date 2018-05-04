@@ -11,12 +11,16 @@ Busqueda booleana
 ```
 python booleano.py 
 ```
+Métodos permitidos
+
+cerca TERMINO1 TERMINO2
+adyacente TERMINO1 TERMINO2
 
 ### Ejercicio
- Escriba un script que procese documentos de un directorio y arme los índices que permitan soportar búsquedas booleanas. Luego, codifique un segundo script que permita buscar por uno o dos términos utilizando los operadores AND, OR y NOT (En el caso del operador NOT, aplique solo a consultas de longitud igual a 2. Por ejemplo, “casa NOT perro”. Entiéndase el uso de este operador como “todos los documentos que posean el término A y no posean el término B”.)
+ Modifique el script del ejercicio 1 para armar un archivo invertido posicional a nivel de palabra. Luego, implemente consultas con operadores de proximidad y búsquedas booleanas por frases.
 
 ### Estructura
 Indice de documentos: doc_name
 Indice de terminos: termino
 Indice invertido: term_id | df | puntero_posting_list
-Posting list: [doc_id]
+Posting: doc_id | TF | [posiciones]
