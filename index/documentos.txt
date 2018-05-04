@@ -1,2 +1,5 @@
-academiacisco.unnoba.edu.ar.txt
-agora.unnoba.edu.ar.txt
+doc1.txt,1.89700434222
+doc2.txt,2.74464821775
+doc3.txt,1.54733638014
+doc4.txt,2.45725579928
+doc5.txt,2.40954370596

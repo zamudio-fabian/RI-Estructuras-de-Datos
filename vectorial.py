@@ -8,10 +8,7 @@ from indexador import Tokenizador
 
 class Buscador():
     FORMATO_POSTING_DOC_ID_TF = "I I"
-    FORMATO_INDICE = "I I I"
-    ADYACENTE = "ady"
-    CERCA = "cerca"
-    CERCA_DIFF = 5
+    FORMATO_INDICE = "I I f I"
 
     def __init__(self):
         self.terminos = []
@@ -26,15 +23,18 @@ class Buscador():
     def cargar_documentos(self):  # Archivo de texto con los nombres de los documentos separados por saltos de línea
         with codecs.open('index/documentos.txt', mode="r", encoding="utf-8") as file_documentos:
             for documento in file_documentos:
-                self.documentos.append(documento.strip())
+                doc_parts = documento.split(',')
+                self.documentos.append({'name':doc_parts[0],'norma':float(doc_parts[1])})
 
-    def cargar_lexicon(self):  # Formato del indice: [id_término, byte donde empieza la posting del término]
+
+    def cargar_lexicon(self):  
+        # Formato del indice: [id_término, DF , IDF, Puntero]
         packer = Struct(self.FORMATO_INDICE)
         with open('index/lexicon.bin', mode="rb") as file_indice:
             bytes_indice = file_indice.read(packer.size)
             while bytes_indice:
                 elementos_indice = packer.unpack(bytes_indice)
-                self.lexicon[self.terminos[elementos_indice[0]]] = {'df':elementos_indice[1],'puntero':elementos_indice[2]}
+                self.lexicon[self.terminos[elementos_indice[0]]] = {'df':elementos_indice[1],'idf':elementos_indice[2],'puntero':elementos_indice[3]}
                 bytes_indice = file_indice.read(packer.size)
 
     def cargar_postings(self, lista_terminos):  # Formato de las postings: df_término, secuencia de id_docs
@@ -82,22 +82,26 @@ class Buscador():
                         lista_2[doc_id].pop(0)
         return docs_con_adyacentes
 
-    def cargar_busqueda(self, params):
-        cant_params = len(params)
-        operadores = [self.CERCA, self.ADYACENTE]
-        if cant_params != 3:
-            print u"ERROR: Debe ingresar tres términos en la busqueda"
-        elif  (cant_params == 3 and params[0] not in operadores):
-            print u"ERROR: La consulta debe tener el formato '[<ady> | <cerca>] <término1> <término2>'"
-        else:
-            respuesta = self.buscar(params)
-            print u"Resultados de la búsqueda"
-            if respuesta:
-                print "ID_DOC\t\tNOMBRE_DOC"
-                for id_doc in respuesta:
-                    print str(id_doc) + "\t\t\t" + self.documentos[id_doc]
-            else:
-                print u"No se obtuvo ningún resultado"
+    def calcular_tfs(self, terminos):
+        ret = {}
+        for termino in terminos:
+            ret[termino] = ret.get(termino, 0) + 1
+        return ret
+
+    def cargar_busqueda(self, tokens_query, typeTFIDF):
+        terminos_query = self.calcular_tfs(tokens_query)
+        if (typeTFIDF == 'C') :
+            ret = recuperar_archivos_opt_c(terminos, terminos_query, terminos_archivos)
+        elif (typeTFIDF == 'B') :
+            ret = recuperar_archivos_opt_b(terminos, terminos_query, terminos_archivos)
+        else :
+            ret = recuperar_archivos_opt_a(terminos, terminos_query, terminos_archivos)
+        ranking = sorted(ret.items(), key=lambda x: x[1], reverse=True)
+        
+        for r in xrange(0, min(15, len(ranking))):
+            if(ranking[r][1] < 0.02):
+                continue
+            print (r+1),'-', terminos_archivos[ranking[r][0]]['docid'], ranking[r]
 
     def buscar(self, lista_parametros):
         terminos_query = []
@@ -118,12 +122,23 @@ class Buscador():
 
 
 if __name__ == "__main__":
+    typeTFIDF = 'A'
+    if "-h" in sys.argv:
+        print "MODO DE USO: python vectorial.py [-t <A|B|C>]"
+        sys.exit(0)
+    if "-t" in sys.argv:
+        if sys.argv.index("-t") + 1 == len(sys.argv):
+            print "ERROR: Debe ingresar el tipo de ponderación que desea utilizar en la query"
+            sys.exit(1)
+        else:
+            typeTFIDF = sys.argv[sys.argv.index("-t") + 1]
+
     buscador = Buscador()
     buscador.cargar_terminos()
     buscador.cargar_documentos()
     buscador.cargar_lexicon()
     texto_consulta = unicode(raw_input("Ingrese su consulta (/q para salir):"), "utf-8")
     while texto_consulta != "/q":
-        parametros_consulta = Tokenizador.tokenizar(texto_consulta)
-        buscador.cargar_busqueda(parametros_consulta)
+        tokens_query = Tokenizador.tokenizar(texto_consulta)
+        buscador.cargar_busqueda(tokens_query, typeTFIDF)
         texto_consulta = unicode(raw_input("Ingrese su consulta (/q para salir):"), "utf-8")

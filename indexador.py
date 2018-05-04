@@ -6,17 +6,20 @@ import codecs
 from os import walk, makedirs
 from os.path import join, isdir
 from struct import Struct
+import math
 
 
 class Tokenizador(object):
     FORMATO_POSTING = "I" # DOC_ID
-    FORMATO_INDICE = "I I I" # ID_TERM DF PUNTERO_POSTING
+    FORMATO_INDICE = "I I f I" # ID_TERM DF IDF PUNTERO_POSTING
 
     def __init__(self, path_corpus):
         self.path_corpus = path_corpus
         self.lexicon = {}
         self.posting = {}
         self.documentos = []
+        self.normas_docs = {}
+        self.idf_terminos = {}
         self.nombre_doc_actual = None
         self.doc_actual_tiene_terminos = None
 
@@ -36,10 +39,10 @@ class Tokenizador(object):
         self.terminos = sorted([termino for termino in self.lexicon])
         # Guardamos los terminos
         self.guardar_terminos()
-        # Guardamos los documentos
-        self.guardar_documentos()
         # Guardamos los posting
         self.guardar_postings_lexicon()
+        # Guardamos los documentos
+        self.guardar_documentos()
 
     def analizar_documento(self, path_doc, doc_id):
         # Leemos el archivo
@@ -53,18 +56,17 @@ class Tokenizador(object):
 
     def update_vocabulario(self, tokens, doc_id):
         # Recorremos los tokens
-        for posicion,token in enumerate(tokens):
+        for token in tokens:
             # Si el termino no esta en el vocabulario lo agrego
             if token not in self.lexicon:
                 self.lexicon[token] = 0 # Document frecuency
-                self.posting[token] = {} # array de doc_id:[pos]
+                self.posting[token] = {} # array de doc_id
             # Si el doc_id no esta en el listado de docs de ese token lo agrego
             if doc_id not in self.posting[token]:
-                self.posting[token][doc_id] = [] # Agrego el doc_id a la lista de posting
-                self.lexicon[token] += 1 # Aumento en 1 el documento frecuency
-
-            #Agrego la posición a la posting
-            self.posting[token][doc_id].append(posicion)
+                self.posting[token][doc_id] = 0 # Seteo el TF en 0
+                self.lexicon[token] += 1 # Aumento en 1 el DF
+            # Aumento en 1 el TF de ese token en ese documento
+            self.posting[token][doc_id] += 1
 
     @staticmethod
     def translate(to_translate):
@@ -101,8 +103,11 @@ class Tokenizador(object):
 
     def guardar_documentos(self):
         with codecs.open('index/documentos.txt', mode="w", encoding="utf-8") as file_documentos:
-            for nombre_doc in self.documentos:
-                file_documentos.write(nombre_doc + "\n")
+            for doc_id, nombre_doc in enumerate(self.documentos):
+                file_documentos.write(nombre_doc +','+str(self.normas_docs[doc_id])+"\n")
+
+    def calcular_idf(self, termino):
+        return math.log(float(len(self.documentos))/self.lexicon[termino], 2)
 
     def guardar_postings_lexicon(self):
         packerPosting = Struct(self.FORMATO_POSTING)
@@ -112,15 +117,26 @@ class Tokenizador(object):
             with open('index/postings.bin', mode="wb") as file_postings:
                 for id_termino, termino in enumerate(self.terminos):
                     # Guardamos el lexicon
-                    file_lexicon.write(packerLexicon.pack(id_termino, self.lexicon[termino] ,puntero_posting))
+                    self.idf_terminos[termino] = self.calcular_idf(termino)
+                    file_lexicon.write(packerLexicon.pack(id_termino, self.lexicon[termino] , self.idf_terminos[termino] ,puntero_posting))
                     for doc_id in self.posting[termino]:
-                        file_postings.write(packerPosting.pack(doc_id)) # Guardo DOC_ID
+                        # Guardo DOC_ID
+                        file_postings.write(packerPosting.pack(doc_id)) 
                         puntero_posting += packerPosting.size
-                        file_postings.write(packerPosting.pack(len(self.posting[termino][doc_id]))) # Guardo TF
+                        # Guardo TF
+                        file_postings.write(packerPosting.pack(self.posting[termino][doc_id])) 
                         puntero_posting += packerPosting.size
-                        for posicion in self.posting[termino][doc_id]:
-                            puntero_posting += packerPosting.size
-                            file_postings.write(packerPosting.pack(posicion)) # Guardo las posiciones
+                        # Voy calculando las normas de los docs
+                        if(doc_id not in self.normas_docs):
+                            self.normas_docs[doc_id] = 0
+                        self.normas_docs[doc_id] += (self.idf_terminos[termino]*self.posting[termino][doc_id])**2
+        # Hago la raiz de las normas
+        for doc_id in self.normas_docs:
+            self.normas_docs[doc_id] = math.sqrt(self.normas_docs[doc_id])
+
+    def guardar_normas(self):
+        print 'IDF'
+        print self.idf_terminos
 
 
 def start(dir_corpus):

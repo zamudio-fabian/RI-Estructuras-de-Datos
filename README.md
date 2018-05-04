@@ -17,10 +17,10 @@ cerca TERMINO1 TERMINO2
 adyacente TERMINO1 TERMINO2
 
 ### Ejercicio
- Modifique el script del ejercicio 1 para armar un archivo invertido posicional a nivel de palabra. Luego, implemente consultas con operadores de proximidad y búsquedas booleanas por frases.
+Modifique el script del ejercicio 1 para armar un archivo invertido con información de frecuencias. Luego, implemente consultas utilizando el modelo vectorial utilizando tres esquemas de ponderación y/o ranking diferentes.
 
 ### Estructura
 Indice de documentos: doc_name
 Indice de terminos: termino
-Indice invertido: term_id | df | puntero_posting_list
-Posting: doc_id | TF | [posiciones]
+Indice invertido: term_id | DF | IDF | puntero_posting_list
+Posting: doc_id | TF 

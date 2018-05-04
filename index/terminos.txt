@@ -1,6 +1,6 @@
-casa
-comida
-juan
-otro
-perro
-uno
+caja
+carter
+espejo
+filtro
+puerta
+rueda
