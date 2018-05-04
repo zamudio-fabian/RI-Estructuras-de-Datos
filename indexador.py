@@ -8,41 +8,47 @@ import os
 from os import makedirs
 from os.path import join, isdir
 from struct import Struct
+import subprocess
 
 class Tokenizador(object):
     FORMATO_POSTING = "I" # DOC_ID
     FORMATO_INDICE = "I I I" # ID_TERM DF PUNTERO_POSTING
 
-    def __init__(self, path_corpus, path_vacias=None):
+    def __init__(self, path_corpus):
         self.path_corpus = path_corpus
-        self.vacias = []
-        self.documentos = os.listdir(path_corpus)
         self.initStructures()
+        self.lexicon = {} # Termino | DF
+        self.documentos = os.listdir(path_corpus)
         self.nombre_doc_actual = None
         self.doc_actual_tiene_terminos = None
-        self.cargar_lista_vacias(path_vacias)
         self.crear_directorio()
 
     def initStructures(self):
-        self.lexicon = {}
-        self.posting = []
+        self.triples = []
 
 
     def createChunks(self):
-        print "Procesando documentos..."
-        try:
-            a = range(10000000000)
-        except MemoryError as error:
-            print "MEMORY ERROR!"
-        
+        index_doc = 0
+        while index_doc < len(self.documentos):
+            curDoc = self.documentos[index_doc]
+            try:
+                triplesDoc = self.processDoc(curDoc)
+                self.triples.append(triplesDoc)
+                index_doc += 1
+            except MemoryError as error:
+                print "MEMORY ERROR!"
+                # guardar chunk y limpiar estructuras!
+                self.guardarChunk()
+                self.initStructures()
 
-    def analizar_documento(self, path_doc, doc_id):
-        # Leemos el archivo
-        pass
+    def processDoc(self, doc_name):
+        with codecs.open(self.path_corpus+'/'+doc_name, mode="w", encoding="utf-8") as file_chunks:
+            
 
-    def generatePostingAux(self, tokens, doc_id):
-        # Recorremos los tokens
-        pass
+    def guardarChunk(self):
+        with codecs.open('index/chunks.txt', mode="w", encoding="utf-8") as file_chunks:
+            for triple in self.triples:
+                file_chunks.write(triple[0]+','+triple[1]+','+triple[2] + "\n")
 
     def update_vocabulario(self, tokens, doc_id):
         # Recorremos los tokens
@@ -76,7 +82,7 @@ class Tokenizador(object):
 
     # Tokenizador básico
     @staticmethod
-    def tokenizar(texto, vacias = []):
+    def tokenizar(texto):
         # To lower case
         texto = texto.lower()
         # Eliminamos caracteres especiales
@@ -85,15 +91,7 @@ class Tokenizador(object):
         texto = re.sub(u"[^a-zñ]|_", " ", texto)
         tokens = texto.split()
         # Sacamos stopwords si es necesario
-        if len(vacias) > 0:
-            tokens = list(set(tokens) - set(vacias))
         return tokens
-
-    def cargar_lista_vacias(self, path_vacias):
-        if path_vacias is not None:
-            with codecs.open(path_vacias, mode="r", encoding="utf-8") as file_vacias:
-                texto_vacias = file_vacias.read()
-                self.vacias = textp_vacias.split()
 
     def crear_directorio(self):
         try:
@@ -136,15 +134,15 @@ def limit_memory(maxsize):
     soft, hard = resource.getrlimit(resource.RLIMIT_AS)
     print 'Memoria  Maxima Asignada  :', soft
 
-def start(dir_corpus, path_vacias=None):
-    limit_memory(1) # limite en cantidad de bytes
-    tokenizador = Tokenizador(dir_corpus, path_vacias=path_vacias)
+def start(dir_corpus):
+    limit_memory(1024 * 1024 * 1) # limite en cantidad de bytes: 1MB
+    tokenizador = Tokenizador(dir_corpus)
     tokenizador.createChunks()
     print u"Finalizado!"
 
 if __name__ == "__main__":
     if "-h" in sys.argv:
-        print "MODO DE USO: python booleano.py -c <path_directorio_corpus> [-v <path_archivo_stopwords>]"
+        print "MODO DE USO: python indexador.py -c <path_directorio_corpus> "
         sys.exit(0)
     if len(sys.argv) < 3:
         print "ERROR: "
@@ -155,11 +153,4 @@ if __name__ == "__main__":
             sys.exit(1)
         else:
             path_corpus = sys.argv[sys.argv.index("-c") + 1]
-    if "-v" in sys.argv:
-        if sys.argv.index("-v") + 1 == len(sys.argv):
-            print "ERROR: Debe ingresar el path del archivo con stopwords"
-            sys.exit(1)
-        else:
-            path_vacias = sys.argv[sys.argv.index("-v") + 1]
-
-    start(path_corpus,path_vacias = None)
+    start(path_corpus)
