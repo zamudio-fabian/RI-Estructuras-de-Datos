@@ -3,6 +3,7 @@
 import re
 import sys
 import codecs
+import math
 from os import walk, makedirs
 from os.path import join, isdir
 from struct import Struct
@@ -10,16 +11,16 @@ from struct import Struct
 
 class Tokenizador(object):
     FORMATO_POSTING = "I" # DOC_ID
-    FORMATO_INDICE = "I I I" # ID_TERM DF PUNTERO_POSTING
+    FORMATO_INDICE = "I I I I I" # ID_TERM DF PUNTERO_POSTING CANT_ELEM_SKIP PUNTERO_SKIP_LIST
+    FORMATO_SKIP_LIST = "I I" # DOC_ID | posición array
 
     def __init__(self, path_corpus, path_vacias=None):
         self.path_corpus = path_corpus
         self.vacias = []
         self.lexicon = {}
         self.posting = {}
+        self.termino_skip_list = {}
         self.documentos = []
-        self.nombre_doc_actual = None
-        self.doc_actual_tiene_terminos = None
         self.cargar_lista_vacias(path_vacias)
 
     def start(self):
@@ -41,7 +42,7 @@ class Tokenizador(object):
         # Guardamos los documentos
         self.guardar_documentos()
         # Guardamos los posting
-        self.guardar_postings()
+        self.guardar_postings_skip_list()
         # Guardamos los indices
         self.guardar_indice()
 
@@ -51,9 +52,6 @@ class Tokenizador(object):
             texto_doc = file_doc.read()
             # Tokenizamos el texto
             tokens = Tokenizador.tokenizar(texto_doc, self.vacias)
-            # Eliminamos palabras cortas o largas fuera del tokenizador para que no afecte a las queries
-            # ya que me interesa que se quede con el caso OR 
-            tokens = Tokenizador.minMaxLargo(tokens)
             # Guardamos los terminos
             self.update_vocabulario(tokens, doc_id)
 
@@ -77,13 +75,6 @@ class Tokenizador(object):
         translate_table = dict(zip(tabin, tabout))
         return to_translate.translate(translate_table)
 
-    @staticmethod
-    def minMaxLargo(tokens):
-        tokensAux = []
-        for token in tokens:
-            if len(token) >= 3 and len(token) <= 20 :
-                tokensAux.append(token)
-        return tokensAux
 
     # Tokenizador básico
     @staticmethod
@@ -123,23 +114,39 @@ class Tokenizador(object):
             for nombre_doc in self.documentos:
                 file_documentos.write(nombre_doc + "\n")
 
-    def guardar_postings(self):
+    def guardar_postings_skip_list(self):
         packer = Struct(self.FORMATO_POSTING)
         puntero_posting = 0
         with open('index/postings.bin', mode="wb") as file_postings:
             for id_termino, termino in enumerate(self.terminos):
+                postingOrdenadas = sorted(self.posting[termino])
                 # Por cada documento guardo el doc_id
-                for doc_id in sorted(self.posting[termino]):
+                largo_posting = len(self.posting[termino])
+                salto_skip = math.ceil(math.sqrt(largo_posting))
+                indexSkip = salto_skip 
+                self.termino_skip_list[termino] = {}
+                # Por cada documento guardo el doc_id
+                for nro_doc, doc_id in enumerate(postingOrdenadas):
                     file_postings.write(packer.pack(doc_id))
+                    # Si es el elemento que tiene que ir a la skip list lo guardo
+                    if nro_doc == indexSkip:
+                        self.termino_skip_list[termino][doc_id] = nro_doc - 1
+                        indexSkip += salto_skip
 
     def guardar_indice(self):
         packer = Struct(self.FORMATO_INDICE)
+        packer_skip_list = Struct(self.FORMATO_SKIP_LIST)
         puntero_posting = 0
-        with open('index/lexicon.bin', mode="wb") as file_lexicon:
-            for id_termino, termino in enumerate(self.terminos):
-                # ID | DF | PUNTERO
-                file_lexicon.write(packer.pack(id_termino, self.lexicon[termino] ,puntero_posting)) 
-                puntero_posting += self.lexicon[termino] * 4 # DF * 4 = X Bytes
+        puntero_skip = 0
+        with open('index/skip_list.bin', mode="wb") as file_skip:
+            with open('index/lexicon.bin', mode="wb") as file_lexicon:
+                for id_termino, termino in enumerate(self.terminos):
+                    # ID | DF | PUNTERO_POSTING | PUNTERO_SKIP_LIST 
+                    file_lexicon.write(packer.pack(id_termino, self.lexicon[termino] ,puntero_posting, len(self.termino_skip_list[termino]) , puntero_skip)) 
+                    puntero_posting += self.lexicon[termino] * 4 # DF * 4 = X Bytes
+                    puntero_skip += len(self.termino_skip_list[termino]) * 8 # N * (4+4) 
+                    for doc_id in self.termino_skip_list[termino]:
+                        file_skip.write(packer_skip_list.pack(doc_id, self.termino_skip_list[termino][doc_id])) 
 
 
 def start(dir_corpus, path_vacias=None):
