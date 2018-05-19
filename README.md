@@ -9,7 +9,7 @@ python indexador.py -f <path_directorio_file>
 ```
 Busqueda booleana
 ```
-python booleano.py 
+python booleano.py [-s]
 ```
 
 ### Ejercicio
