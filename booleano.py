@@ -6,6 +6,7 @@ from struct import Struct
 from os.path import join
 from indexador import Tokenizador
 import time
+from BTrees.OOBTree import OOBTree
 
 class Buscador():
     FORMATO_POSTING = "I"
@@ -17,14 +18,14 @@ class Buscador():
     ERROR_CONSULTA = u"ERROR: La consulta debe tener el formato '[<not>] <término> [(<and>|<or>|<and not>) <término>]'"
 
     def __init__(self):
-        self.terminos = []
         self.documentos = []
         self.lexicon = {}
+        self.tree = OOBTree()
 
     def cargar_terminos(self):  # Archivo de texto con los nombres de los términos separados por saltos de línea
         with codecs.open('index/terminos.txt', mode="r", encoding="utf-8") as file_terminos:
-            for termino in file_terminos:
-                self.terminos.append(termino.strip())
+            for index, termino in enumerate(file_terminos):
+                self.tree.insert(termino.split()[0],index)
 
     def cargar_documentos(self):  # Archivo de texto con los nombres de los documentos separados por saltos de línea
         with codecs.open('index/documentos.txt', mode="r", encoding="utf-8") as file_documentos:
@@ -37,7 +38,7 @@ class Buscador():
             bytes_indice = file_indice.read(packer.size)
             while bytes_indice:
                 elementos_indice = packer.unpack(bytes_indice)
-                self.lexicon[self.terminos[elementos_indice[0]]] = {'df':elementos_indice[1],'puntero':elementos_indice[2],'size_skip':elementos_indice[3],'puntero_skip':elementos_indice[4]}
+                self.lexicon[elementos_indice[0]] = {'df':elementos_indice[1],'puntero':elementos_indice[2],'size_skip':elementos_indice[3],'puntero_skip':elementos_indice[4]}
                 bytes_indice = file_indice.read(packer.size)
 
     def cargar_postings_and_skips(self, lista_terminos):  # Formato de las postings: df_término, secuencia de id_docs
@@ -47,9 +48,11 @@ class Buscador():
             with open('index/skip_list.bin', mode="rb") as file_skip:
                 docs_por_termino = {}
                 skips_por_terminos = {}
-                for termino in lista_terminos:
+                ids_terminos = self.obtener_ids_terminos(lista_terminos)
+                for termino in ids_terminos:
                     docs_por_termino[termino] = []
                     skips_por_terminos[termino] = []
+                    id_doc_anterior = 0
                     # Si el elemento esta en el lexico lo proceso de otra manera lo ignoro
                     if termino in self.lexicon:
                         pos_posting = self.lexicon[termino]['puntero']
@@ -61,21 +64,24 @@ class Buscador():
                         # Leo la posting
                         for i in xrange(documento_frecuency):
                             bytes_posting = file_postings.read(packer.size)
-                            id_doc = packer.unpack(bytes_posting)[0]
+                            id_doc = id_doc_anterior + packer.unpack(bytes_posting)[0]
+                            id_doc_anterior = id_doc
                             docs_por_termino[termino].append(id_doc)
                         # Leo la skip list
                         for index in range(0,size_skip):
                             bytes_skip = file_skip.read(packer_skip.size)
                             elementos_skip = packer_skip.unpack(bytes_skip)
                             skips_por_terminos[termino].append({'doc_id':elementos_skip[0], 'doc_index':elementos_skip[1]})
-            return docs_por_termino[lista_terminos[0]] , docs_por_termino[lista_terminos[1]], skips_por_terminos[lista_terminos[0]], skips_por_terminos[lista_terminos[1]]
+            return docs_por_termino[ids_terminos[0]] , docs_por_termino[ids_terminos[1]], skips_por_terminos[ids_terminos[0]], skips_por_terminos[ids_terminos[1]]
 
 
     def cargar_postings(self, lista_terminos):  # Formato de las postings: df_término, secuencia de id_docs
         packer = Struct(self.FORMATO_POSTING)
         with open('index/postings.bin', mode="rb") as file_postings:
             docs_por_termino = {}
-            for termino in lista_terminos:
+            ids_terminos = self.obtener_ids_terminos(lista_terminos)
+            for termino in ids_terminos:
+                id_doc_anterior = 0;
                 docs_por_termino[termino] = []
                 # Si el elemento esta en el lexico lo proceso de otra manera lo ignoro
                 if termino in self.lexicon:
@@ -85,16 +91,17 @@ class Buscador():
                     # Leo la posting
                     for i in xrange(documento_frecuency):
                         bytes_posting = file_postings.read(packer.size)
-                        id_doc = packer.unpack(bytes_posting)[0]
+                        id_doc = id_doc_anterior + packer.unpack(bytes_posting)[0]
+                        id_doc_anterior = id_doc
                         docs_por_termino[termino].append(id_doc)
-            return docs_por_termino[lista_terminos[0]] , docs_por_termino[lista_terminos[1]]
+            return docs_por_termino[ids_terminos[0]] , docs_por_termino[ids_terminos[1]]
 
 
     def obtener_ids_terminos(self, lista_terminos):
         lista_ids = []
         for termino in lista_terminos:
-            if termino in self.terminos:
-                lista_ids.append(self.terminos.index(termino))
+            if self.tree.has_key(termino):
+                lista_ids.append(self.tree.get(termino))
         return lista_ids
 
     @staticmethod
@@ -192,9 +199,9 @@ class Buscador():
             print 'CANTIDAD DE DOCUMENTOS = '+ str(len(respuesta))
             print u"Resultados de la búsqueda"
             if respuesta:
-                print "ID_DOC\t\tNOMBRE_DOC"
+                print "ID_DOC"
                 for id_doc in respuesta:
-                    print str(id_doc) + "\t\t\t" + self.documentos[id_doc]
+                    print str(id_doc)
             else:
                 print u"No se obtuvo ningún resultado"
 
@@ -218,12 +225,22 @@ class Buscador():
 
 
 if __name__ == "__main__":
+
+    con_skip = False
+
+    if "-h" in sys.argv:
+        print "MODO DE USO: python booleano.py [-s]"
+        sys.exit(0)
+
+    if "-s" in sys.argv:
+        con_skip = True
+
     buscador = Buscador()
     buscador.cargar_terminos()
     buscador.cargar_documentos()
     buscador.cargar_lexicon()
     texto_consulta = unicode(raw_input("Ingrese su consulta (/q para salir):"), "utf-8")
     while texto_consulta != "/q":
-        parametros_consulta = Tokenizador.tokenizar(texto_consulta)
-        buscador.cargar_busqueda(parametros_consulta, False)
+        parametros_consulta = Tokenizador.translate(texto_consulta).split()
+        buscador.cargar_busqueda(parametros_consulta, con_skip)
         texto_consulta = unicode(raw_input("Ingrese su consulta (/q para salir):"), "utf-8")

@@ -5,7 +5,7 @@ Repositorio de Recuperación de Información
 ### Ejemplo de uso
 Indexar corpus
 ```
-python indexador.py -c <path_directorio_corpus> [-v <path_archivo_stopwords>] 
+python indexador.py -f <path_directorio_file>
 ```
 Busqueda booleana
 ```
@@ -13,10 +13,11 @@ python booleano.py
 ```
 
 ### Ejercicio
-Agregue skip lists a su índice del ejercicio 1 y ejecute un conjunto de consultas AND sobre el índice original y luego usando los punteros. Compare los tiempos de ejecución
+A partir de un conjunto de posting lists provistas realice un programa que arme el vocabulario utilizando un B+Tree por un lado y un archivo binario con la información de las postings y frecuencias por el otro. Use DGaps y agregue skip-lists.
 
-### Estructura
-Indice de documentos: doc_name
-Indice de terminos: termino
-Indice invertido: term_id | df | puntero_posting_list
-Posting: doc_id
+
+### Requisitos
+Instalar BTREE (https://pythonhosted.org/BTrees/)
+```
+pip install ZODB
+```
