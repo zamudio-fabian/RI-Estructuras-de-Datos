@@ -218,6 +218,16 @@ class Buscador():
 
 
 if __name__ == "__main__":
+
+    con_skip = False
+
+    if "-h" in sys.argv:
+        print "MODO DE USO: python booleano.py [-s]"
+        sys.exit(0)
+
+    if "-s" in sys.argv:
+        con_skip = True
+        
     buscador = Buscador()
     buscador.cargar_terminos()
     buscador.cargar_documentos()
@@ -225,5 +235,5 @@ if __name__ == "__main__":
     texto_consulta = unicode(raw_input("Ingrese su consulta (/q para salir):"), "utf-8")
     while texto_consulta != "/q":
         parametros_consulta = Tokenizador.tokenizar(texto_consulta)
-        buscador.cargar_busqueda(parametros_consulta, False)
+        buscador.cargar_busqueda(parametros_consulta, con_skip)
         texto_consulta = unicode(raw_input("Ingrese su consulta (/q para salir):"), "utf-8")
