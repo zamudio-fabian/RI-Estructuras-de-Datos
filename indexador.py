@@ -233,7 +233,7 @@ class Indexador(object):
                     file_tiempos.write("\n")
 
 
-def main(dir_corpus):
+def start(dir_corpus):
     tokenizador = Tokenizador(dir_corpus)
     print u"Extrayendo los términos de la colección..."
     tokenizador.analizar_corpus()
@@ -255,8 +255,17 @@ def main(dir_corpus):
     print u"Finalizado!"
 
 if __name__ == "__main__":
+    if "-h" in sys.argv:
+        print "MODO DE USO: indexador.py -c <path_corpus>"
+        sys.exit(0)
     if len(sys.argv) < 3:
-        print "ERROR: Debe ingresar el directorio que contiene el corpus y el directorio destino de los indices."
-        print "MODO DE USO: indexar_vectorial_ej11.py -c <path_corpus>"
-    else:
-    main(sys.argv[1])
+        print "MODO DE USO: indexador.py -c <path_corpus>"
+        sys.exit(1)
+    if "-c" in sys.argv:
+        if sys.argv.index("-c") + 1 == len(sys.argv):
+            print "ERROR: Debe ingresar el directorio que contiene el corpus"
+            sys.exit(1)
+        else:
+            path_file = sys.argv[sys.argv.index("-c") + 1]
+
+    start(path_file)
