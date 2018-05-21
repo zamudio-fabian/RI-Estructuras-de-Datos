@@ -109,8 +109,8 @@ class Tokenizador(object):
 
     @staticmethod
     def translate(to_translate):
-        tabin = u"áéíóú"
-        tabout = u"aeiou"
+        tabin = u"áéíóúñ"
+        tabout = u"aeioun"
         tabin = [ord(char) for char in tabin]
         translate_table = dict(zip(tabin, tabout))
         return to_translate.translate(translate_table)
