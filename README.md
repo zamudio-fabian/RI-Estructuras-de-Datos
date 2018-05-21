@@ -1,16 +1,13 @@
 # RI-Estructuras-de-datos
 @author - Zamudio Fabian (2018)
 Repositorio de Recuperación de Información
+
 ### Ejemplo de uso
-Indexar corpus
+Indexar corpus con Variable Length
 ```
-python indexador.py -c <path_directorio_corpus> [-v <path_archivo_stopwords>] 
-```
-Busqueda booleana
-```
-python booleano.py 
+python indexador.py -c <path_directorio_corpus> 
 ```
 
 ### Ejercicio
-Utilizando el código anterior ejecute corridas con diferentes colecciones y consultas, y mida el tiempo de ejecución en cada caso. Calcule los tamaños mínimos, máximos y promedio de las listas de posteo. ¿Qué utilidad tiene esta información respecto de los tiempos de ejecución? 
-Calcule el overhead de los índices respecto de la colección. Calcule el overhead para cada documento. ¿Qué conclusiones se pueden extraer?
+A partir de una colección utilizada en ejercicios previos construya el índice invertido con información de frecuencias y comprímalo utilizando  Variable-Lenght Codes. 
+Calcule tiempos de compresión/descompresión y tamaño resultante en cada caso. Realice dos experimentos, uno codificando con DGaps y otro sin codificar. Compare los tamaños de los índices resultantes.
