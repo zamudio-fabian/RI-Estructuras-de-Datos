@@ -1,5 +1,7 @@
 # ZAMUDIO FABIAN
 results/*
+corpus/*
+index/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
