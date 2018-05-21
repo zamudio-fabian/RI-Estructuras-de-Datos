@@ -9,7 +9,7 @@ python indexador.py -c <path_directorio_corpus> [-v <path_archivo_stopwords>]
 ```
 Busqueda booleana
 ```
-python vectorial.py 
+python vectorial.py [-t <A|B|C>]
 ```
 
 ### Ejercicio
