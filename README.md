@@ -11,7 +11,6 @@ Busqueda booleana
 ```
 python booleano.py 
 ```
-Métodos permitidos
 
 ### Ejercicio
 Modifique el script del ejercicio 1 para armar un archivo invertido con información de frecuencias. Luego, implemente consultas utilizando el modelo vectorial utilizando tres esquemas de ponderación y/o ranking diferentes.
