@@ -13,10 +13,5 @@ python booleano.py
 ```
 
 ### Ejercicio
- Escriba un script que procese documentos de un directorio y arme los índices que permitan soportar búsquedas booleanas. Luego, codifique un segundo script que permita buscar por uno o dos términos utilizando los operadores AND, OR y NOT (En el caso del operador NOT, aplique solo a consultas de longitud igual a 2. Por ejemplo, “casa NOT perro”. Entiéndase el uso de este operador como “todos los documentos que posean el término A y no posean el término B”.)
-
-### Estructura
-Indice de documentos: doc_name
-Indice de terminos: termino
-Indice invertido: term_id | df | puntero_posting_list
-Posting list: [doc_id]
+Utilizando el código anterior ejecute corridas con diferentes colecciones y consultas, y mida el tiempo de ejecución en cada caso. Calcule los tamaños mínimos, máximos y promedio de las listas de posteo. ¿Qué utilidad tiene esta información respecto de los tiempos de ejecución? 
+Calcule el overhead de los índices respecto de la colección. Calcule el overhead para cada documento. ¿Qué conclusiones se pueden extraer?
