@@ -153,7 +153,7 @@ if __name__ == "__main__":
         print "MODO DE USO: python booleano.py -c <path_directorio_corpus> [-v <path_archivo_stopwords>]"
         sys.exit(0)
     if len(sys.argv) < 3:
-        print "ERROR: "
+        print "MODO DE USO: python booleano.py -c <path_directorio_corpus> [-v <path_archivo_stopwords>]"
         sys.exit(1)
     if "-c" in sys.argv:
         if sys.argv.index("-c") + 1 == len(sys.argv):
