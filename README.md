@@ -1,7 +1,6 @@
 # RI-Estructuras-de-datos
 @author - Zamudio Fabian (2018)
 Repositorio de Recuperación de Información
-
 ### Ejemplo de uso
 Indexar corpus
 ```
