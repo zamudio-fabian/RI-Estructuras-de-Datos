@@ -36,8 +36,12 @@ class Tokenizador(object):
 
 
     def createChunks(self):
+        print 'Creando chunks'
         index_doc = 0
         while index_doc < len(self.documentos):
+            
+            sys.stdout.write('Procesando DOC Nro:'+str(index_doc) + '\n')
+            sys.stdout.flush()
             curDoc = self.documentos[index_doc]
             try:
                 # Agregamos a la tripla general las del documento actual
@@ -50,7 +54,9 @@ class Tokenizador(object):
                 self.initStructures()
         # Guardamos el resto de chunks que no se guardaron
         self.guardarChunkParcial()
+        print 'Ordenando chunks...'
         self.sortChunk()
+        print 'Guardando binarios...'
         self.saveChunksToBinarios()
         self.guardar_documentos()
         self.guardar_terminos()
@@ -151,18 +157,19 @@ def limit_memory(maxsize):
     soft, hard = resource.getrlimit(resource.RLIMIT_AS)
     print 'Memoria  Maxima Asignada  :', soft
 
-def start(dir_corpus):
-    limit_memory(1024 * 1024 * 1) # limite en cantidad de bytes: 1MB
+def start(dir_corpus, limite_de_momoria):
+    limit_memory(limite_de_momoria) # limite en cantidad de bytes: 1MB
     tokenizador = Tokenizador(dir_corpus)
     tokenizador.createChunks()
     print u"Finalizado!"
 
 if __name__ == "__main__":
+    limite_de_momoria = 1024 * 1024 * 1
     if "-h" in sys.argv:
         print "MODO DE USO: python indexador.py -c <path_directorio_corpus> "
         sys.exit(0)
     if len(sys.argv) < 3:
-        print "ERROR: "
+        print "ERROR: python indexador.py -c <path_directorio_corpus> [-l <limite_de_momoria>]"
         sys.exit(1)
     if "-c" in sys.argv:
         if sys.argv.index("-c") + 1 == len(sys.argv):
@@ -170,4 +177,10 @@ if __name__ == "__main__":
             sys.exit(1)
         else:
             path_corpus = sys.argv[sys.argv.index("-c") + 1]
-    start(path_corpus)
+    if "-l" in sys.argv:
+        if sys.argv.index("-l") + 1 == len(sys.argv):
+            print "ERROR: Debe ingresar el directorio del corpus"
+            sys.exit(1)
+        else:
+            limite_de_momoria = int(sys.argv[sys.argv.index("-l") + 1])
+    start(path_corpus, limite_de_momoria)
