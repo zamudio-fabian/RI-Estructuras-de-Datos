@@ -25,7 +25,7 @@ class Tokenizador(object):
         self.crear_directorio()
 
     def getDocs(self, path_corpus):
-        nombre_doc = []
+        nombres_docs = []
         for raiz, dirs, nombres_docs in walk(unicode(self.path_corpus)):
             # Protección para no leer archivos de sistema MAC ej: .DS_store
             nombres_docs = [item for item in nombres_docs if item[0] != u'.']
@@ -39,9 +39,9 @@ class Tokenizador(object):
         print 'Creando chunks'
         index_doc = 0
         while index_doc < len(self.documentos):
-            
-            sys.stdout.write('Procesando DOC Nro:'+str(index_doc) + '\n')
             sys.stdout.flush()
+            sys.stdout.write("\rProcesando DOC Nº" + str(index_doc))
+            
             curDoc = self.documentos[index_doc]
             try:
                 # Agregamos a la tripla general las del documento actual
@@ -53,6 +53,7 @@ class Tokenizador(object):
                 self.guardarChunkParcial()
                 self.initStructures()
         # Guardamos el resto de chunks que no se guardaron
+
         self.guardarChunkParcial()
         print 'Ordenando chunks...'
         self.sortChunk()
