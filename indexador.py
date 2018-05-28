@@ -35,7 +35,7 @@ class Tokenizador(object):
         self.triples = []
 
 
-    def createChunks(self):
+    def createChunks(self, limite_de_momoria):
         print 'Creando chunks'
         index_doc = 0
         while index_doc < len(self.documentos):
@@ -45,10 +45,12 @@ class Tokenizador(object):
             curDoc = self.documentos[index_doc]
             try:
                 # Agregamos a la tripla general las del documento actual
-                self.triples.append(self.generateTriplesFromTokens(self.processDoc(curDoc),index_doc))
+                triplasDoc = self.generateTriplesFromTokens(self.processDoc(curDoc),index_doc)
+                if ((sys.getsizeof(triplasDoc) + sys.getsizeof(self.triples)) >= limite_de_momoria):
+                    raise MemoryError('MEMORY ERROR!')
+                self.triples.append(triplasDoc)
                 index_doc += 1
             except MemoryError as error:
-                print "MEMORY ERROR!"
                 # guardar chunk y limpiar estructuras!
                 self.guardarChunkParcial()
                 self.initStructures()
@@ -107,6 +109,7 @@ class Tokenizador(object):
             
 
     def guardarChunkParcial(self):
+        print '\nGuardamos chunk parcial'
         with codecs.open('index/chunks.txt', mode="w", encoding="utf-8") as file_chunks:
             for tripleDoc in self.triples:
                 # Por cada triple list del doc
@@ -132,6 +135,7 @@ class Tokenizador(object):
         # Reemplazamos caracteres especiales con espacios
         texto = re.sub(u"[^a-zñ]|_", " ", texto)
         tokens = texto.split()
+        tokens = filter(lambda x: len(x) > 1, tokens)
         # Sacamos stopwords si es necesario
         return tokens
 
@@ -159,9 +163,9 @@ def limit_memory(maxsize):
     print 'Memoria  Maxima Asignada  :', soft
 
 def start(dir_corpus, limite_de_momoria):
-    limit_memory(limite_de_momoria) # limite en cantidad de bytes: 1MB
+    # limit_memory(limite_de_momoria) # limite en cantidad de bytes: 1MB
     tokenizador = Tokenizador(dir_corpus)
-    tokenizador.createChunks()
+    tokenizador.createChunks(limite_de_momoria)
     print u"Finalizado!"
 
 if __name__ == "__main__":
